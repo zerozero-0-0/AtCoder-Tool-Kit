@@ -144,10 +144,7 @@ fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let contest_dir = PathBuf::from(contest_name);
 
     if contest_dir.exists() {
-        return Err(anyhow::anyhow!(
-            "{} はすでに存在します",
-            contest_dir.display()
-        ));
+        println!("{} はすでに存在します", contest_dir.display());
     } else {
         println!("{} を作成します", contest_dir.display());
         fs::create_dir_all(&contest_dir)?;
@@ -173,7 +170,7 @@ fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let test_dir = contest_dir.join("test");
 
     if test_dir.exists() {
-        return Err(anyhow::anyhow!("{} はすでに存在します", test_dir.display()));
+        println!("{} はすでに存在します", test_dir.display());
     } else {
         println!("{} を作成します", test_dir.display());
         fs::create_dir_all(&test_dir)?;
