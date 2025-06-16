@@ -1,6 +1,7 @@
 use anyhow::Ok;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use dialoguer::console::style;
 use reqwest::Client;
 use scraper::{Html, Selector};
 use std::fs;
@@ -11,6 +12,7 @@ use std::{
     process::Stdio,
     u32,
 };
+use dialoguer::Select;
 
 const CPP_TEMPLATE: &str = r#"#include <iostream>
 using namespace std;
@@ -47,7 +49,6 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::New { contest_name } => {
             let contest_id = format_contest_id(&contest_name)?;
-            println!("新しいコンテストセット {} を作成します", contest_id);
             create_contest_directory(contest_id)?;
         }
         Commands::Test { problem_char } => {
@@ -143,25 +144,39 @@ fn extract_contest_id_from_path(path: &PathBuf) -> anyhow::Result<String> {
 fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let contest_dir = PathBuf::from(contest_name);
 
+    
+    println!("{} を作成しますか?", contest_dir.display());
+    let choices = &["yes", "no"];
+
+    let choice: usize = Select::new()
+        .default(0)
+        .items(choices)
+        .interact()?; 
+
+    if choice == 1 {
+        println!("処理を中止しました");
+        return Ok(());
+    }
+
     if contest_dir.exists() {
-        println!("{} はすでに存在します", contest_dir.display());
+        println!("{} は既に存在します", contest_dir.display());
     } else {
-        println!("{} を作成します", contest_dir.display());
         fs::create_dir_all(&contest_dir)?;
     }
 
     let problems = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+
+    let mut exist_files: Vec<String> = Vec::new();
 
     for problem in problems {
         let file_name = format!("{}.cpp", problem);
         let file_path = contest_dir.join(file_name);
 
         if file_path.exists() {
-            println!("{} はすでに存在します", file_path.display());
+            exist_files.push(format!("{}.cpp", problem));
             continue;
         }
 
-        println!("{} を作成します", file_path.display());
         let mut file = fs::File::create(&file_path)?;
         use std::io::Write;
         file.write_all(CPP_TEMPLATE.as_bytes())?;
@@ -170,12 +185,19 @@ fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let test_dir = contest_dir.join("test");
 
     if test_dir.exists() {
-        println!("{} はすでに存在します", test_dir.display());
+        exist_files.push(test_dir.display().to_string());
     } else {
-        println!("{} を作成します", test_dir.display());
         fs::create_dir_all(&test_dir)?;
     }
 
+    if !exist_files.is_empty() {
+        for file in exist_files {
+            print!("{} ",file);
+        }
+        println!("は既に存在しています");
+    }
+
+    println!("{} コンテストセット : {} の作成が完了しました", style("finished").green(), contest_dir.display());
     return Ok(());
 }
 
