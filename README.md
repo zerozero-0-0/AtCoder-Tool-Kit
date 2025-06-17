@@ -24,3 +24,6 @@ xclipは`sudo apt update && sudo apt install xclip`でインストールでき�
 `cargo install --path .` 
 `atk --version` で　`atk 0.1.0` のように表示されれば成功です。
 
+#### 注意
+使用上ディレクトリ名は{(abc or arc or agc or ahc)}xxx 形式で固定になります。
+典型90やEDPC, 鉄則のようなディレクトリの場合は例外処理を追加する予定です。

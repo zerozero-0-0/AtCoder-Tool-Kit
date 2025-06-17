@@ -1,6 +1,7 @@
 use anyhow::Ok;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
+use dialoguer::Select;
 use dialoguer::console::style;
 use reqwest::Client;
 use scraper::{Html, Selector};
@@ -12,7 +13,6 @@ use std::{
     process::Stdio,
     u32,
 };
-use dialoguer::Select;
 
 const CPP_TEMPLATE: &str = r#"#include <iostream>
 using namespace std;
@@ -27,9 +27,7 @@ int main()
 // 以下TODO
 // current dirがahc の場合に限りビジュアライザへのリンクを表示する
 //　atk test xx メソッドをはやす。current dirがahc の時に限り, ./a.out < output.txt > input_xx.txt を実行する.
-
 // ----------------------------------------------  //
-
 
 #[derive(Parser, Debug)]
 #[command(
@@ -156,14 +154,10 @@ fn extract_contest_id_from_path(path: &PathBuf) -> anyhow::Result<String> {
 fn create_algorithm_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let contest_dir = PathBuf::from(contest_name);
 
-    
     println!("{} を作成しますか?", contest_dir.display());
     let choices = &["yes", "no"];
 
-    let choice: usize = Select::new()
-        .default(0)
-        .items(choices)
-        .interact()?; 
+    let choice: usize = Select::new().default(0).items(choices).interact()?;
 
     if choice == 1 {
         println!("処理を中止しました");
@@ -204,12 +198,16 @@ fn create_algorithm_contest_directory(contest_name: String) -> anyhow::Result<()
 
     if !exist_files.is_empty() {
         for file in exist_files {
-            print!("{} ",file);
+            print!("{} ", file);
         }
         println!("は既に存在しています");
     }
 
-    println!("{} コンテストセット : {} の作成が完了しました", style("finished").green(), contest_dir.display());
+    println!(
+        "{} コンテストセット : {} の作成が完了しました",
+        style("finished").green(),
+        contest_dir.display()
+    );
     return Ok(());
 }
 
@@ -217,17 +215,14 @@ async fn create_heuristic_contest_directory(contest_name: String) -> anyhow::Res
     /*
     // AHC用のディレクトリを作成する
     // とりあえずoutput.txtは一つのものを共有する
-    */
+     */
 
     let contest_dir = PathBuf::from(&contest_name);
 
     println!("{} を作成しますか?", contest_dir.display());
     let choices = &["yes", "no"];
 
-    let choice: usize = Select::new()
-        .default(0)
-        .items(choices)
-        .interact()?;
+    let choice: usize = Select::new().default(0).items(choices).interact()?;
 
     if choice == 1 {
         println!("処理を中止しました");
@@ -250,7 +245,10 @@ async fn create_heuristic_contest_directory(contest_name: String) -> anyhow::Res
 
     // ToDo: testcaseをローカルで持つ
     // Web版のリンクをwebスクレイピングで入手しそこから取得する。
-    let url = format!("https://atcoder.jp/contests/{}/tasks/{}_a", &contest_name, &contest_name);
+    let url = format!(
+        "https://atcoder.jp/contests/{}/tasks/{}_a",
+        &contest_name, &contest_name
+    );
     // https://atcoder.jp/contests/ahc048/tasks/ahc048_a
     let client = Client::new();
     let res = client.get(&url).send().await?;
@@ -269,17 +267,22 @@ async fn create_heuristic_contest_directory(contest_name: String) -> anyhow::Res
     let mut a_s = document.select(&a_selector).peekable();
     while let Some(a) = a_s.next() {
         if let Some(href) = a.value().attr("href") {
-            if href.starts_with(&format!("/ahc{}/", &contest_name[3..])) || href.contains(&format!("img.atcoder.jp/ahc{}", &contest_name[3..])) {
+            if href.starts_with(&format!("/ahc{}/", &contest_name[3..]))
+                || href.contains(&format!("img.atcoder.jp/ahc{}", &contest_name[3..]))
+            {
                 let url = if href.starts_with("http") {
                     href.to_string()
                 } else {
-                    format!("https://img.atcoder.jp/ahc{}/{}", &contest_name[3..], href.trim_start_matches(&format!("/ahc{}/", &contest_name[3..])))
+                    format!(
+                        "https://img.atcoder.jp/ahc{}/{}",
+                        &contest_name[3..],
+                        href.trim_start_matches(&format!("/ahc{}/", &contest_name[3..]))
+                    )
                 };
                 println!("ビジュアライザ画像リンク: {}", url);
             }
         }
     }
-
 
     return Ok(());
 }
