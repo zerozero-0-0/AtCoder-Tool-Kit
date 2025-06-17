@@ -23,6 +23,14 @@ int main()
 }
 "#;
 
+// ----------------------------------------------  //
+// 以下TODO
+// current dirがahc の場合に限りビジュアライザへのリンクを表示する
+//　atk test xx メソッドをはやす。current dirがahc の時に限り, ./a.out < output.txt > input_xx.txt を実行する.
+
+// ----------------------------------------------  //
+
+
 #[derive(Parser, Debug)]
 #[command(
     author = "Zrzr",
@@ -49,7 +57,11 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::New { contest_name } => {
             let contest_id = format_contest_id(&contest_name)?;
-            create_contest_directory(contest_id)?;
+            if contest_id.starts_with("ahc") {
+                create_heuristic_contest_directory(contest_id).await?;
+            } else {
+                create_algorithm_contest_directory(contest_id)?;
+            }
         }
         Commands::Test { problem_char } => {
             let current_path = env::current_dir()?;
@@ -141,7 +153,7 @@ fn extract_contest_id_from_path(path: &PathBuf) -> anyhow::Result<String> {
     }
 }
 
-fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
+fn create_algorithm_contest_directory(contest_name: String) -> anyhow::Result<()> {
     let contest_dir = PathBuf::from(contest_name);
 
     
@@ -178,11 +190,11 @@ fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
         }
 
         let mut file = fs::File::create(&file_path)?;
-        use std::io::Write;
+
         file.write_all(CPP_TEMPLATE.as_bytes())?;
     }
 
-    let test_dir = contest_dir.join("test");
+    let test_dir = contest_dir.join(".test");
 
     if test_dir.exists() {
         exist_files.push(test_dir.display().to_string());
@@ -198,6 +210,77 @@ fn create_contest_directory(contest_name: String) -> anyhow::Result<()> {
     }
 
     println!("{} コンテストセット : {} の作成が完了しました", style("finished").green(), contest_dir.display());
+    return Ok(());
+}
+
+async fn create_heuristic_contest_directory(contest_name: String) -> anyhow::Result<()> {
+    /*
+    // AHC用のディレクトリを作成する
+    // とりあえずoutput.txtは一つのものを共有する
+    */
+
+    let contest_dir = PathBuf::from(&contest_name);
+
+    println!("{} を作成しますか?", contest_dir.display());
+    let choices = &["yes", "no"];
+
+    let choice: usize = Select::new()
+        .default(0)
+        .items(choices)
+        .interact()?;
+
+    if choice == 1 {
+        println!("処理を中止しました");
+        return Ok(());
+    }
+
+    if contest_dir.exists() {
+        println!("{} は既に存在します", contest_dir.display());
+    } else {
+        fs::create_dir_all(&contest_dir)?;
+    }
+
+    let file = contest_dir.join("main.cpp");
+    if file.exists() {
+        println!("{} は既に存在します", file.display());
+    } else {
+        let mut f = fs::File::create(&file)?;
+        f.write_all(CPP_TEMPLATE.as_bytes())?;
+    }
+
+    // ToDo: testcaseをローカルで持つ
+    // Web版のリンクをwebスクレイピングで入手しそこから取得する。
+    let url = format!("https://atcoder.jp/contests/{}/tasks/{}_a", &contest_name, &contest_name);
+    // https://atcoder.jp/contests/ahc048/tasks/ahc048_a
+    let client = Client::new();
+    let res = client.get(&url).send().await?;
+    if !res.status().is_success() {
+        return Err(anyhow::anyhow!(
+            "HTTPリクエストが失敗しました: {}",
+            res.status()
+        ));
+    }
+
+    let body = res.text().await?;
+    let document = Html::parse_document(&body);
+
+    let a_selector = Selector::parse("a").unwrap();
+
+    let mut a_s = document.select(&a_selector).peekable();
+    while let Some(a) = a_s.next() {
+        if let Some(href) = a.value().attr("href") {
+            if href.starts_with(&format!("/ahc{}/", &contest_name[3..])) || href.contains(&format!("img.atcoder.jp/ahc{}", &contest_name[3..])) {
+                let url = if href.starts_with("http") {
+                    href.to_string()
+                } else {
+                    format!("https://img.atcoder.jp/ahc{}/{}", &contest_name[3..], href.trim_start_matches(&format!("/ahc{}/", &contest_name[3..])))
+                };
+                println!("ビジュアライザ画像リンク: {}", url);
+            }
+        }
+    }
+
+
     return Ok(());
 }
 

@@ -23,3 +23,4 @@ xclipは`sudo apt update && sudo apt install xclip`でインストールでき�
 
 `cargo install --path .` 
 `atk --version` で　`atk 0.1.0` のように表示されれば成功です。
+
