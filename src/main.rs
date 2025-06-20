@@ -458,7 +458,16 @@ async fn get_sample_cases(
     let url = if env::current_dir().unwrap().ends_with("edpc") {
         format!("https://atcoder.jp/contests/dp/tasks/dp_{}", problem_char)
     } else if env::current_dir().unwrap().ends_with("typical90") {
-        format!("https://atcoder.jp/contests/typical90/tasks/typical90_{}", problem_char)
+        let mut problem_idx = String::new();
+        let mut problem_num: u32 = problem_char.parse().unwrap_or(0);
+        problem_num = problem_num - 1;
+        while problem_num > 0 {
+            let cnum = problem_num % 26;
+            let c = (cnum + 'a' as u32) as u8 as char;
+            problem_idx = format!("{}{}", c, problem_idx);
+            problem_num /= 26;
+        }
+        format!("https://atcoder.jp/contests/typical90/tasks/typical90_{}", problem_idx)
     } else {
         format!(
         "https://atcoder.jp/contests/{}/tasks/{}_{}",
