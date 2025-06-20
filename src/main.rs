@@ -17,9 +17,15 @@ use std::{
 const CPP_TEMPLATE: &str = r#"#include <iostream>
 using namespace std;
 
+#define rep(i, n) for (int i = 0; i < (n); ++i)
+using ll = long long;
+using P = pair<int, int>;
+
 int main()
 {
-
+    cin.tie(nullptr);
+    ios::sync_with_stdio(false);
+    
 }
 "#;
 
@@ -57,6 +63,8 @@ async fn main() -> anyhow::Result<()> {
             let contest_id = format_contest_id(&contest_name)?;
             if contest_id.starts_with("ahc") {
                 create_heuristic_contest_directory(contest_id).await?;
+            } else if contest_id == "edpc" {
+                create_edpc_contest_directory(contest_id)?;
             } else {
                 create_algorithm_contest_directory(contest_id)?;
             }
@@ -81,6 +89,8 @@ fn format_contest_id(input_id: &String) -> anyhow::Result<String> {
     /*
     // ユーザーの入力値を正しい形式に変換する
     // [abc or arc or agc or ahc] + [3桁の数字]
+    // もしくは
+    // EDPC
     // args:
     //     input_id: ユーザーが入力したコンテストID
     // returns:
@@ -90,12 +100,12 @@ fn format_contest_id(input_id: &String) -> anyhow::Result<String> {
         && (input_id.starts_with("abc")
             || input_id.starts_with("arc")
             || input_id.starts_with("agc")
-            || input_id.starts_with("ahc"))
+            || input_id.starts_with("ahc")) || input_id == "edpc"
     {
         return Ok(input_id.to_string());
     }
 
-    if input_id.len() < 4 || input_id.len() > 6 {
+    if !(input_id.len() == 4 || input_id.len() == 6) {
         return Err(anyhow::anyhow!(
             "コンテストIDは4〜6文字でなければなりません"
         ));
@@ -109,9 +119,11 @@ fn format_contest_id(input_id: &String) -> anyhow::Result<String> {
         ("agc", &input_id[3..])
     } else if input_id.starts_with("ahc") {
         ("ahc", &input_id[3..])
+    } else if input_id == "EDPC" {
+        ("EDPC", "")
     } else {
         return Err(anyhow::anyhow!(
-            "コンテストIDはabc, arc, agc, ahcのいずれかで始まる必要があります"
+            "コンテストIDはabc, arc, agc, ahc で始まるか EDPC である必要があります"
         ));
     };
 
@@ -140,7 +152,7 @@ fn extract_contest_id_from_path(path: &PathBuf) -> anyhow::Result<String> {
             || dir_name.starts_with("arc")
             || dir_name.starts_with("agc")
             || dir_name.starts_with("ahc"))
-        && dir_name[3..].parse::<u32>().is_ok();
+        && dir_name[3..].parse::<u32>().is_ok() || dir_name == "edpc";
 
     if is_valid_contest_id {
         Ok(dir_name.to_string())
@@ -287,6 +299,72 @@ async fn create_heuristic_contest_directory(contest_name: String) -> anyhow::Res
     return Ok(());
 }
 
+fn create_edpc_contest_directory(contest_name: String) -> anyhow::Result<()> {
+    /*
+    // EDPC (Educational DP Contest) 用のディレクトリを作成する
+    // args:
+    //     contest_name: コンテスト名 (edpc のみ)
+    // returns:
+    //     成功した場合は Ok(()), 失敗した場合は Err(anyhow::Error)
+    */
+
+    let contest_dir = PathBuf::from(contest_name);
+    println!("{} を作成しますか?", contest_dir.display());
+    let choices = &["yes", "no"];
+
+    let choice: usize = Select::new().default(0).items(choices).interact()?;
+
+    if choice == 1 {
+        println!("処理を中止しました");
+        return Ok(());
+    }
+
+    if contest_dir.exists() {
+        println!("{} は既に存在します", contest_dir.display());
+    } else {
+        fs::create_dir_all(&contest_dir)?;
+    }
+
+    let mut exist_files: Vec<String> = Vec::new();
+
+    for problem in 'a'..='z' {
+        let file_name = format!("{}.cpp", problem);
+        let file_path = contest_dir.join(file_name);
+
+        if file_path.exists() {
+            exist_files.push(format!("{}.cpp", problem));
+            continue;
+        }
+
+        let mut file = fs::File::create(&file_path)?;
+
+        file.write_all(CPP_TEMPLATE.as_bytes())?;
+    }
+
+    let test_dir = contest_dir.join(".test");
+
+    if test_dir.exists() {
+        exist_files.push(test_dir.display().to_string());
+    } else {
+        fs::create_dir_all(&test_dir)?;
+    }
+
+    if !exist_files.is_empty() {
+        for file in exist_files {
+            print!("{} ", file);
+        }
+        println!("は既に存在しています");
+    }
+
+    println!(
+        "{} コンテストセット : {} の作成が完了しました",
+        style("finished").green(),
+        contest_dir.display()
+    );
+
+    return Ok(());
+}
+
 #[derive(Debug)]
 struct TestCase {
     input: String,
@@ -305,10 +383,15 @@ async fn get_sample_cases(
     returns:
         サンプルケースのリスト
     */
-    let url = format!(
+    
+
+    let url = if env::current_dir().unwrap().ends_with("edpc") {
+        format!("https://atcoder.jp/contests/dp/tasks/dp_{}", problem_char)
+    } else {
+        format!(
         "https://atcoder.jp/contests/{}/tasks/{}_{}",
         contest_id, contest_id, problem_char
-    );
+    )};
 
     let client = Client::new();
     let res = client.get(&url).send().await?;
@@ -369,7 +452,7 @@ async fn get_sample_cases(
     Ok(samples)
 }
 
-async fn get_sample_cases_cached(
+async fn get_sample_cases_cached (
     contest_id: String,
     problem_char: &String,
 ) -> anyhow::Result<Vec<TestCase>> {
@@ -383,7 +466,7 @@ async fn get_sample_cases_cached(
     */
 
     // テストケース保存ディレクトリ
-    let test_dir = PathBuf::from("test").join(problem_char);
+    let test_dir = PathBuf::from(".test").join(problem_char);
     if test_dir.exists() {
         // 既存のテストケースを読み込む
         let mut cases = Vec::new();
