@@ -460,10 +460,10 @@ async fn get_sample_cases(
     } else if env::current_dir().unwrap().ends_with("typical90") {
         let mut problem_idx = String::new();
         let mut problem_num: u32 = problem_char.parse().unwrap_or(0);
-        problem_num = problem_num - 1;
+        
         while problem_num > 0 {
             let cnum = problem_num % 26;
-            let c = (cnum + 'a' as u32) as u8 as char;
+            let c = (cnum - 1 + 'a' as u32) as u8 as char;
             problem_idx = format!("{}{}", c, problem_idx);
             problem_num /= 26;
         }
@@ -473,6 +473,8 @@ async fn get_sample_cases(
         "https://atcoder.jp/contests/{}/tasks/{}_{}",
         contest_id, contest_id, problem_char
     )};
+
+    println!("{}", url);
 
     let client = Client::new();
     let res = client.get(&url).send().await?;
