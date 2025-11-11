@@ -17,14 +17,9 @@ use std::{
 const CPP_TEMPLATE: &str = r#"#include <iostream>
 using namespace std;
 
-#define rep(i, n) for (int i = 0; i < (n); ++i)
-using ll = long long;
-using P = pair<int, int>;
-
-int main()
-{
-    cin.tie(nullptr);
-    ios::sync_with_stdio(false);
+int main() {
+  cin.tie(nullptr);
+  ios::sync_with_stdio(false);
     
 }
 "#;
